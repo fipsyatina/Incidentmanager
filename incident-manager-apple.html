@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Incident Manager</title>
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+/* ── VARIABLES ── */
+:root{
+  --bg:#f5f5f7;
+  --surface:#ffffff;
+  --surface2:#f5f5f7;
+  --surface3:#e8e8ed;
+  --sidebar:#ffffffcc;
+  --border:rgba(0,0,0,.08);
+  --border-strong:rgba(0,0,0,.13);
+  --text:#1d1d1f;
+  --text2:#6e6e73;
+  --text3:#aeaeb2;
+  --accent:#0071e3;
+  --accent-light:rgba(0,113,227,.1);
+  --p1:#ff3b30;--p1-bg:rgba(255,59,48,.08);--p1-border:rgba(255,59,48,.2);
+  --p2:#ff9500;--p2-bg:rgba(255,149,0,.08);--p2-border:rgba(255,149,0,.2);
+  --p3:#ffcc00;--p3-bg:rgba(255,204,0,.1);--p3-border:rgba(255,204,0,.25);
+  --p4:#34c759;--p4-bg:rgba(52,199,89,.08);--p4-border:rgba(52,199,89,.2);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',sans-serif;
+  --font-mono:'SF Mono','Menlo','Monaco','Courier New',monospace;
+  --radius:12px;--radius-sm:8px;--radius-xs:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 4px 24px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+  --shadow-modal:0 16px 64px rgba(0,0,0,.2),0 2px 8px rgba(0,0,0,.08);
+}
+
+/* ── APP SHELL ── */
+body{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;min-height:100vh;
+}
+
+/* ── TITLEBAR ── */
+.titlebar{
+  position:sticky;top:0;z-index:100;
+  height:52px;
+  background:rgba(255,255,255,.82);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+}
+.titlebar-icon{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(145deg,#1c7ef5,#0055d4);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,113,227,.4);
+}
+.titlebar-icon svg{width:16px;height:16px}
+.titlebar-title{font-size:.9rem;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.titlebar-subtitle{font-size:.75rem;color:var(--text2);letter-spacing:-.01em}
+.titlebar-spacer{flex:1}
+.tb-btn{
+  font-family:var(--font);font-size:.8rem;font-weight:500;letter-spacing:-.01em;
+  padding:.42rem 1rem;border-radius:20px;border:none;cursor:pointer;
+  transition:all .18s cubic-bezier(.25,.46,.45,.94);
+  background:transparent;color:var(--text2);
+}
+.tb-btn:hover{background:rgba(0,0,0,.05);color:var(--text)}
+.tb-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,113,227,.35)}
+.tb-btn.active:hover{background:#0077ed;box-shadow:0 3px 12px rgba(0,113,227,.4)}
+.new-btn{
+  font-family:var(--font);font-size:.8rem;font-weight:500;
+  padding:.42rem 1rem;border-radius:20px;border:none;cursor:pointer;
+  background:var(--accent);color:#fff;
+  box-shadow:0 2px 8px rgba(0,113,227,.35);
+  transition:all .18s cubic-bezier(.25,.46,.45,.94);
+  display:flex;align-items:center;gap:5px;
+}
+.new-btn:hover{background:#0077ed;box-shadow:0 3px 12px rgba(0,113,227,.4);transform:scale(1.01)}
+.new-btn:active{transform:scale(.98)}
+
+/* ── LAYOUT ── */
+.app-body{display:flex;flex:1}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:220px;flex-shrink:0;
+  padding:20px 12px;
+  border-right:1px solid var(--border);
+  background:rgba(255,255,255,.6);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+}
+.sidebar-section{margin-bottom:24px}
+.sidebar-label{
+  font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text3);padding:0 10px;margin-bottom:6px;
+}
+.sidebar-item{
+  display:flex;align-items:center;gap:8px;
+  padding:.5rem .75rem;border-radius:var(--radius-sm);
+  font-size:.85rem;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;user-select:none;
+  margin-bottom:2px;
+}
+.sidebar-item:hover{background:rgba(0,0,0,.05);color:var(--text)}
+.sidebar-item.active{background:rgba(0,113,227,.1);color:var(--accent)}
+.sidebar-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.sidebar-item.active svg{opacity:1}
+.sidebar-badge{
+  margin-left:auto;font-size:.68rem;font-weight:600;
+  background:var(--p1);color:#fff;
+  border-radius:10px;padding:1px 6px;min-width:18px;text-align:center;
+}
+.sidebar-badge.low{background:var(--text3)}
+
+.stat-mini{
+  background:var(--surface);border-radius:var(--radius-sm);
+  padding:.75rem 1rem;margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  display:flex;align-items:center;gap:10px;
+}
+.stat-mini-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.stat-mini-val{font-size:1.1rem;font-weight:700;line-height:1;margin-left:auto}
+.stat-mini-lbl{font-size:.72rem;color:var(--text2);font-weight:500}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow:auto}
+.view{display:none;padding:28px 32px;animation:appear .25s ease}
+.view.active{display:block}
+@keyframes appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── PAGE HEADER ── */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:1.6rem;font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.page-sub{font-size:.85rem;color:var(--text2);margin-top:3px;font-weight:400}
+
+/* ── FORM ── */
+.form-card{
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;max-width:760px;
+}
+.form-section{padding:24px 28px;border-bottom:1px solid var(--border)}
+.form-section:last-child{border-bottom:none}
+.form-section-title{
+  font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:16px;
+}
+.form-grid{display:grid;gap:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:.8rem;font-weight:500;color:var(--text2);letter-spacing:-.01em}
+.form-label .req{color:var(--p1);margin-left:2px}
+input,textarea,select{
+  font-family:var(--font);font-size:.9rem;color:var(--text);
+  background:var(--surface2);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);padding:.62rem .9rem;
+  outline:none;width:100%;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+  -webkit-appearance:none;appearance:none;
+}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+input:focus,textarea:focus,select:focus{
+  background:#fff;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,113,227,.15);
+}
+textarea{resize:vertical;min-height:90px;line-height:1.55}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236e6e73' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:36px;cursor:pointer;
+}
+select option{font-family:var(--font)}
+.form-err{font-size:.75rem;color:var(--p1);font-weight:500;animation:appear .15s}
+
+/* priority display */
+.prio-display{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface2);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);padding:.7rem 1rem;
+  transition:all .25s cubic-bezier(.25,.46,.45,.94);
+}
+.prio-swatch{
+  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .25s;
+}
+.prio-swatch svg{width:16px;height:16px}
+.prio-display-label{font-size:.9rem;font-weight:600;letter-spacing:-.01em;transition:color .25s}
+.prio-display-sub{font-size:.75rem;color:var(--text2);margin-top:2px}
+.prio-matrix-tag{
+  margin-left:auto;font-family:var(--font-mono);font-size:.68rem;
+  background:var(--border);color:var(--text2);
+  padding:3px 8px;border-radius:5px;white-space:nowrap;
+}
+
+.submit-row{padding:20px 28px;display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.cancel-btn{
+  font-family:var(--font);font-size:.85rem;font-weight:500;
+  padding:.6rem 1.4rem;border-radius:var(--radius-sm);
+  border:1px solid var(--border-strong);background:var(--surface);
+  color:var(--text2);cursor:pointer;transition:all .15s;
+}
+.cancel-btn:hover{background:var(--surface2)}
+.primary-btn{
+  font-family:var(--font);font-size:.85rem;font-weight:500;letter-spacing:-.01em;
+  padding:.6rem 1.6rem;border-radius:var(--radius-sm);
+  background:var(--accent);color:#fff;border:none;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,113,227,.3);
+  transition:all .18s cubic-bezier(.25,.46,.45,.94);
+}
+.primary-btn:hover{background:#0077ed;transform:scale(1.01);box-shadow:0 3px 12px rgba(0,113,227,.4)}
+.primary-btn:active{transform:scale(.98)}
+
+/* ── QUEUE ── */
+.queue-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.queue-title-area{flex:1}
+.filter-strip{
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.flt{
+  font-family:var(--font);font-size:.78rem;font-weight:500;letter-spacing:-.01em;
+  padding:.36rem .9rem;border-radius:16px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--text2);cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.flt:hover{background:var(--surface2);border-color:rgba(0,0,0,.18)}
+.flt.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,113,227,.3)}
+
+.queue-card{
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.queue-table{width:100%;border-collapse:collapse}
+.queue-table thead th{
+  font-size:.72rem;font-weight:600;letter-spacing:.02em;
+  color:var(--text2);
+  padding:.75rem 1.1rem;text-align:left;
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;position:sticky;top:0;
+}
+.queue-table tbody tr{
+  border-bottom:1px solid var(--border);
+  transition:background .1s;cursor:pointer;
+}
+.queue-table tbody tr:last-child{border-bottom:none}
+.queue-table tbody tr:hover{background:#f5f5f7}
+.queue-table tbody td{padding:.8rem 1.1rem;font-size:.85rem;vertical-align:middle}
+
+.td-id{font-family:var(--font-mono);font-size:.72rem;color:var(--text3)}
+.td-title{font-weight:500;color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-person{font-size:.82rem;color:var(--text2);white-space:nowrap}
+.td-ts{font-family:var(--font-mono);font-size:.7rem;color:var(--text3);white-space:nowrap}
+
+/* priority pill */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.73rem;font-weight:600;letter-spacing:-.01em;
+  padding:.28rem .7rem;border-radius:16px;border:1px solid;white-space:nowrap;
+}
+.pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* urgency / impact chip */
+.chip{
+  display:inline-block;font-size:.72rem;font-weight:500;
+  padding:.22rem .6rem;border-radius:5px;border:1px solid;
+}
+
+/* critical row */
+.row-crit{background:rgba(255,59,48,.028)!important}
+.row-crit:hover{background:rgba(255,59,48,.055)!important}
+
+.empty-state{
+  padding:56px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.empty-icon{width:44px;height:44px;opacity:.2}
+.empty-text{font-size:.9rem;color:var(--text2);font-weight:500}
+
+/* ── MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.28);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;animation:fadeOverlay .2s ease}
+@keyframes fadeOverlay{from{opacity:0}to{opacity:1}}
+.modal{
+  background:#fff;border-radius:16px;
+  width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+  box-shadow:var(--shadow-modal);
+  animation:slideModal .25s cubic-bezier(.34,1.3,.64,1);
+}
+@keyframes slideModal{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-header{
+  padding:22px 24px 0;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+}
+.modal-close{
+  width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--surface3);color:var(--text2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all .15s;font-size:.85rem;
+}
+.modal-close:hover{background:rgba(0,0,0,.12);color:var(--text)}
+.modal-id-tag{font-family:var(--font-mono);font-size:.7rem;color:var(--text3);margin-bottom:4px}
+.modal-title{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;color:var(--text);line-height:1.3}
+.modal-body{padding:16px 24px 24px}
+.modal-desc-box{
+  background:var(--surface2);border-radius:var(--radius-sm);
+  padding:14px;font-size:.875rem;line-height:1.65;color:var(--text2);
+  margin-bottom:20px;
+}
+.modal-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.meta-field{display:flex;flex-direction:column;gap:3px}
+.meta-key{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}
+.meta-val{font-size:.875rem;font-weight:500;color:var(--text)}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);z-index:600;
+  background:rgba(30,30,30,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  color:#fff;font-size:.83rem;font-weight:500;letter-spacing:-.01em;
+  padding:.7rem 1.4rem;border-radius:20px;
+  box-shadow:0 4px 20px rgba(0,0,0,.25);
+  opacity:0;transition:all .3s cubic-bezier(.34,1.3,.64,1);
+  pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .view{padding:20px 16px}
+  .form-row{grid-template-columns:1fr}
+  .queue-header{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<header class="titlebar">
+  <div class="titlebar-icon">
+    <svg viewBox="0 0 16 16" fill="none">
+      <path d="M8 1.5L13.5 4.5V8C13.5 11 11 13.5 8 14.5C5 13.5 2.5 11 2.5 8V4.5L8 1.5Z" stroke="white" stroke-width="1.2" fill="rgba(255,255,255,.2)"/>
+      <path d="M5.5 8L7.5 10L10.5 6.5" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div>
+    <div class="titlebar-title">Incident Manager</div>
+  </div>
+  <div class="titlebar-spacer"></div>
+  <button class="tb-btn active" id="btn-queue" onclick="showView('queue')">Kolejka</button>
+  <button class="new-btn" onclick="showView('form')">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Nowe zgłoszenie
+  </button>
+</header>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Widoki</div>
+      <div class="sidebar-item active" id="sb-queue" onclick="showView('queue')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="2" rx="1" fill="currentColor"/><rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor"/><rect x="2" y="11" width="8" height="2" rx="1" fill="currentColor"/></svg>
+        Kolejka
+        <span class="sidebar-badge" id="sb-crit-count">0</span>
+      </div>
+      <div class="sidebar-item" id="sb-form" onclick="showView('form')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6h4M6 9h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        Nowe zgłoszenie
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Priorytety</div>
+      <div class="stat-mini">
+        <div class="stat-mini-dot" style="background:var(--p1)"></div>
+        <div>
+          <div style="font-size:.72rem;font-weight:600;color:var(--text)">P1 Krytyczny</div>
+          <div class="stat-mini-lbl">Natychmiastowy</div>
+        </div>
+        <div class="stat-mini-val" style="color:var(--p1)" id="sm-p1">0</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-dot" style="background:var(--p2)"></div>
+        <div>
+          <div style="font-size:.72rem;font-weight:600;color:var(--text)">P2 Wysoki</div>
+          <div class="stat-mini-lbl">Szybka reakcja</div>
+        </div>
+        <div class="stat-mini-val" style="color:var(--p2)" id="sm-p2">0</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-dot" style="background:var(--p3)"></div>
+        <div>
+          <div style="font-size:.72rem;font-weight:600;color:var(--text)">P3 Średni</div>
+          <div class="stat-mini-lbl">Planowy</div>
+        </div>
+        <div class="stat-mini-val" style="color:var(--p3)" id="sm-p3">0</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-dot" style="background:var(--p4)"></div>
+        <div>
+          <div style="font-size:.72rem;font-weight:600;color:var(--text)">P4 Niski</div>
+          <div class="stat-mini-lbl">Niska pilność</div>
+        </div>
+        <div class="stat-mini-val" style="color:var(--p4)" id="sm-p4">0</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══ QUEUE VIEW ══ -->
+    <div class="view active" id="view-queue">
+      <div class="queue-header">
+        <div class="queue-title-area">
+          <div class="page-title">Kolejka incydentów</div>
+          <div class="page-sub" id="q-sub">Łącznie 0 zgłoszeń</div>
+        </div>
+        <div class="filter-strip" id="filter-strip"></div>
+      </div>
+
+      <div class="queue-card">
+        <table class="queue-table">
+          <thead>
+            <tr>
+              <th>Identyfikator</th>
+              <th>Priorytet</th>
+              <th>Tytuł incydentu</th>
+              <th>Zgłaszający</th>
+              <th>Pilność</th>
+              <th>Wpływ</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="queue-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ FORM VIEW ══ -->
+    <div class="view" id="view-form">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Nowe zgłoszenie</div>
+          <div class="page-sub">Wypełnij formularz, aby zarejestrować incydent bezpieczeństwa</div>
+        </div>
+      </div>
+
+      <div class="form-card">
+
+        <!-- dane osoby -->
+        <div class="form-section">
+          <div class="form-section-title">Dane zgłaszającego</div>
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="f-fn">Imię <span class="req">*</span></label>
+                <input id="f-fn" type="text" placeholder="Jan"/>
+                <div class="form-err" id="err-fn"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-ln">Nazwisko <span class="req">*</span></label>
+                <input id="f-ln" type="text" placeholder="Kowalski"/>
+                <div class="form-err" id="err-ln"></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="f-email">Adres e-mail <span class="req">*</span></label>
+                <input id="f-email" type="email" placeholder="jan@firma.pl"/>
+                <div class="form-err" id="err-email"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-phone">Telefon <span class="req">*</span></label>
+                <input id="f-phone" type="tel" placeholder="500 100 200"/>
+                <div class="form-err" id="err-phone"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- opis -->
+        <div class="form-section">
+          <div class="form-section-title">Opis incydentu</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="f-title">Tytuł <span class="req">*</span></label>
+              <input id="f-title" type="text" placeholder="Krótkie hasłowe opisanie sytuacji (widoczne w kolejce)"/>
+              <div class="form-err" id="err-title"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-desc">Szczegółowy opis <span class="req">*</span></label>
+              <textarea id="f-desc" placeholder="Opisz dokładnie co się wydarzyło, jakie systemy są dotknięte i jakie działania podjęto…"></textarea>
+              <div class="form-err" id="err-desc"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- pilność & wpływ -->
+        <div class="form-section">
+          <div class="form-section-title">Ocena incydentu</div>
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="f-urg">Pilność <span class="req">*</span></label>
+                <select id="f-urg" onchange="updatePrio()">
+                  <option value="High">Wysoka — natychmiastowe działanie</option>
+                  <option value="Medium">Średnia — szybka reakcja</option>
+                  <option value="Low">Niska — można zaplanować</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-imp">Wpływ <span class="req">*</span></label>
+                <select id="f-imp" onchange="updatePrio()">
+                  <option value="High">Wysoki — systemy krytyczne</option>
+                  <option value="Medium">Średni — ograniczony wpływ</option>
+                  <option value="Low">Niski — marginalny wpływ</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Obliczony priorytet</label>
+              <div class="prio-display" id="prio-display">
+                <div class="prio-swatch" id="prio-swatch"></div>
+                <div>
+                  <div class="prio-display-label" id="prio-label"></div>
+                  <div class="prio-display-sub" id="prio-sub"></div>
+                </div>
+                <span class="prio-matrix-tag" id="prio-tag"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <button class="cancel-btn" onclick="showView('queue')">Anuluj</button>
+          <button class="primary-btn" onclick="submitForm()">Utwórz zgłoszenie</button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="maybeClose(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div id="modal-head-content"></div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── DATA ── */
+const MATRIX={High:{High:"Krytyczny",Medium:"Wysoki",Low:"Średni"},Medium:{High:"Wysoki",Medium:"Średni",Low:"Niski"},Low:{High:"Średni",Medium:"Niski",Low:"Niski"}};
+const PM={
+  Krytyczny:{label:"Priorytet 1 — Krytyczny",short:"P1 · Krytyczny",color:"#ff3b30",bg:"rgba(255,59,48,.09)",border:"rgba(255,59,48,.22)",swatchBg:"rgba(255,59,48,.12)"},
+  Wysoki:   {label:"Priorytet 2 — Wysoki",   short:"P2 · Wysoki",   color:"#ff9500",bg:"rgba(255,149,0,.08)",border:"rgba(255,149,0,.22)",swatchBg:"rgba(255,149,0,.12)"},
+  Średni:   {label:"Priorytet 3 — Średni",   short:"P3 · Średni",   color:"#c89800",bg:"rgba(200,152,0,.07)", border:"rgba(200,152,0,.2)", swatchBg:"rgba(255,204,0,.14)"},
+  Niski:    {label:"Priorytet 4 — Niski",    short:"P4 · Niski",    color:"#28a745",bg:"rgba(40,167,69,.07)", border:"rgba(40,167,69,.2)", swatchBg:"rgba(52,199,89,.12)"},
+};
+const UL={High:"Wysoka",Medium:"Średnia",Low:"Niska"};
+const IL={High:"Wysoki",Medium:"Średni", Low:"Niski"};
+const CC={
+  High:  {c:"#ff3b30",bg:"rgba(255,59,48,.09)",b:"rgba(255,59,48,.22)"},
+  Medium:{c:"#c89800",bg:"rgba(200,152,0,.08)", b:"rgba(200,152,0,.22)"},
+  Low:   {c:"#28a745",bg:"rgba(40,167,69,.08)",b:"rgba(40,167,69,.22)"},
+};
+
+const SAMPLE=[
+  {fn:"Marek",ln:"Kowalski",email:"m.kowalski@firma.pl",phone:"500 100 200",title:"Ransomware w sieci produkcyjnej",desc:"Złośliwe oprogramowanie zaszyfrowane pliki na 14 serwerach. Linia produkcyjna całkowicie zatrzymana, straty szacowane na 80 tys. PLN/h. Trwa izolacja segmentów sieci.",urgency:"High",impact:"High",ts:"2025-05-07T06:12"},
+  {fn:"Anna",ln:"Nowak",email:"a.nowak@corp.eu",phone:"601 222 333",title:"Wyciek danych klientów – baza PROD",desc:"Nieautoryzowany eksport 50 tys. rekordów z bazy CRM na zewnętrzny serwer FTP. Dane zawierają PESEL, adres, numery kart płatniczych.",urgency:"High",impact:"High",ts:"2025-05-07T06:45"},
+  {fn:"Piotr",ln:"Wiśniewski",email:"p.wisniewski@ngo.org",phone:"510 333 444",title:"DDoS na bramę VPN",desc:"Atak wolumetryczny 40 Gbps na koncentrator VPN. Wszyscy pracownicy zdalni odcięci od systemów wewnętrznych. ISP powiadomiony.",urgency:"High",impact:"High",ts:"2025-05-07T07:03"},
+  {fn:"Katarzyna",ln:"Zielińska",email:"k.zielinska@bank.pl",phone:"603 444 555",title:"Przejęcie konta administratora AD",desc:"Wykryto logowanie z Ukrainy na konto ADM_backup. Konto zablokowane. Trwa analiza zakresu uzyskanego dostępu i potencjalnej eskalacji uprawnień.",urgency:"High",impact:"High",ts:"2025-05-07T07:30"},
+  {fn:"Tomasz",ln:"Lewandowski",email:"t.lew@hosting24.pl",phone:"512 555 666",title:"Zero-day w Apache HTTP Server",desc:"CVE-2025-1337 aktywnie eksploatowany na 3 serwerach webowych. Patch niedostępny. Wdrożono tymczasowe reguły WAF.",urgency:"High",impact:"High",ts:"2025-05-07T08:00"},
+  {fn:"Agnieszka",ln:"Kamińska",email:"a.kaminska@med.pl",phone:"604 666 777",title:"Nieautoryzowany dostęp do EDM pacjentów",desc:"5 kont pielęgniarek użytych poza godzinami pracy do przeglądania historii chorób ~200 pacjentów. Sprawa zgłoszona do UODO.",urgency:"High",impact:"Medium",ts:"2025-05-07T08:20"},
+  {fn:"Łukasz",ln:"Wróbel",email:"l.wrobel@energo.pl",phone:"513 777 888",title:"Anomalia SCADA – zmiana parametrów ICS",desc:"Nieautoryzowane zmiany wartości w sterownikach PLC systemu HVAC. Vendor powiadomiony. Trwa weryfikacja integralności konfiguracji.",urgency:"High",impact:"Medium",ts:"2025-05-07T08:55"},
+  {fn:"Monika",ln:"Jankowska",email:"m.jankowska@uni.edu.pl",phone:"605 888 999",title:"Phishing CEO – przekierowanie przelewu",desc:"Prezes kliknął link w spreparowanym e-mailu podszywającym się pod CFO. Przelew 120 tys. PLN autoryzowany przed wykryciem.",urgency:"High",impact:"Medium",ts:"2025-05-07T09:10"},
+  {fn:"Rafał",ln:"Szymański",email:"r.szymanski@logist.com",phone:"514 999 100",title:"Trojański backdoor w bibliotece npm",desc:"Pakiet 'log-helper' v2.3.1 zawiera ukryty keylogger wysyłający dane na C2. Dotknięte 8 projektów deweloperskich.",urgency:"Medium",impact:"High",ts:"2025-05-07T09:30"},
+  {fn:"Joanna",ln:"Woźniak",email:"j.wozniak@retail.pl",phone:"606 100 200",title:"Skimmer kart – terminal POS Warszawa C3",desc:"Wykryto sprzętową modyfikację terminala w sklepie nr 47. Dane szacunkowo 300 kart klientów mogą być skompromitowane.",urgency:"Medium",impact:"High",ts:"2025-05-07T09:50"},
+  {fn:"Grzegorz",ln:"Dąbrowski",email:"g.dabrowski@it.gov.pl",phone:"515 200 300",title:"SQL Injection w formularzu logowania",desc:"Skaner DAST wykrył podatność umożliwiającą ekstrakcję hash haseł. Formularz wyłączony do czasu wdrożenia poprawki.",urgency:"Medium",impact:"High",ts:"2025-05-07T10:05"},
+  {fn:"Beata",ln:"Mazur",email:"b.mazur@fintech.io",phone:"607 300 400",title:"Cryptominer na 6 stacjach roboczych",desc:"XMRig wykryty przez EDR na 6 stacjach. Wysokie użycie CPU przez 72h. Stacje odizolowane, przywracanie z backup.",urgency:"Medium",impact:"Medium",ts:"2025-05-07T10:20"},
+  {fn:"Krzysztof",ln:"Piotrowski",email:"k.piotrowski@cloud.pl",phone:"516 400 500",title:"Eksfiltracja przez kanał DNS",desc:"DNScat2 wykryty na hoście 192.168.5.12. Przesłano ~50 MB danych ukrytych w zapytaniach DNS w ciągu 4 godzin.",urgency:"Medium",impact:"Medium",ts:"2025-05-07T10:40"},
+  {fn:"Marta",ln:"Grabowska",email:"m.grabowska@law.pl",phone:"608 500 600",title:"Brute-force na RDP serwera backupów",desc:"6 200 prób logowania z IP 185.234.x.x w ciągu 30 minut. Konto zablokowane, IP zablokowany na firewall.",urgency:"Medium",impact:"Medium",ts:"2025-05-07T11:00"},
+  {fn:"Michał",ln:"Nowakowski",email:"m.nowakowski@devops.pl",phone:"517 600 700",title:"Credential stuffing – portal B2B",desc:"Masowe próby logowania z 1200 unikalnych danych uwierzytelniających. 34 konta przejęte. Wymuszone resety, MFA aktywowane.",urgency:"Medium",impact:"Medium",ts:"2025-05-07T11:20"},
+  {fn:"Sylwia",ln:"Krawczyk",email:"s.krawczyk@media.pl",phone:"609 700 800",title:"Defacement strony internetowej",desc:"Strona główna zastąpiona przekazem politycznym. Panel CMS niedostępny. Strona wyłączona do czasu przywrócenia.",urgency:"High",impact:"Low",ts:"2025-05-07T11:35"},
+  {fn:"Damian",ln:"Rutkowski",email:"d.rutkowski@infra.pl",phone:"518 800 900",title:"Podatność RCE w firmware routera",desc:"CVE-2024-9901: RCE bez uwierzytelnienia w MikroTik RouterOS < 7.14. Urządzenie izolowane, aktualizacja w toku.",urgency:"High",impact:"Low",ts:"2025-05-07T11:50"},
+  {fn:"Izabela",ln:"Kaczmarska",email:"i.kaczmarska@hr.pl",phone:"610 900 100",title:"Podejrzany email z makrem Office",desc:"Pracownik otworzył .docm z nieznajomego nadawcy. AV zablokował makro. Brak infekcji, stacja poddana pełnemu skanowaniu.",urgency:"Low",impact:"High",ts:"2025-05-07T12:00"},
+  {fn:"Paweł",ln:"Michalski",email:"p.michalski@ecom.pl",phone:"519 100 200",title:"Wyciek pliku .env z GitHub",desc:"Plik .env z kluczami AWS S3 i bazy danych był publiczny przez 48h. Klucze unieważnione, audyt dostępu w toku.",urgency:"Low",impact:"High",ts:"2025-05-07T12:15"},
+  {fn:"Natalia",ln:"Pawlak",email:"n.pawlak@soc.pl",phone:"611 200 300",title:"Kompromitacja konta e-mail dyrektora",desc:"Reguła przekierowuje wszystkie wiadomości na zewnętrzny adres Gmail. Reguła usunięta, hasło zresetowane, MFA wdrożone.",urgency:"Medium",impact:"Low",ts:"2025-05-07T12:30"},
+  {fn:"Bartosz",ln:"Sikora",email:"b.sikora@startup.io",phone:"520 300 400",title:"Nieautoryzowany port RDP na firewall",desc:"Port 3389 otwarty na IP publiczne bez zgody. Wykryto podczas audytu reguł firewalla. Reguła natychmiast usunięta.",urgency:"Medium",impact:"Low",ts:"2025-05-07T12:45"},
+  {fn:"Kamila",ln:"Wierzbicka",email:"k.wierzbicka@edu.pl",phone:"612 400 500",title:"Social engineering – fałszywy helpdesk",desc:"Pracownik działu księgowości przekazał hasło VPN telefonicznie osobie podającej się za IT Support.",urgency:"Low",impact:"Medium",ts:"2025-05-07T13:00"},
+  {fn:"Artur",ln:"Jabłoński",email:"a.jablonski@audit.pl",phone:"521 500 600",title:"Hardcoded secret AWS w kodzie",desc:"Klucz dostępowy AWS zakodowany w pliku config.py w prywatnym repo. Brak potwierdzenia eksploatacji zewnętrznej.",urgency:"Low",impact:"Medium",ts:"2025-05-07T13:15"},
+  {fn:"Magdalena",ln:"Baran",email:"m.baran@public.pl",phone:"613 600 700",title:"Podejrzana aktywność konta serwisowego",desc:"Konto svc_backup loguje się o 3:00 i kasuje logi systemowe. Analiza forensic w toku, konto tymczasowo zablokowane.",urgency:"Low",impact:"Low",ts:"2025-05-07T13:30"},
+  {fn:"Sebastian",ln:"Zawadzki",email:"s.zawadzki@noc.pl",phone:"522 700 800",title:"Spam rozsyłany z domeny firmowej",desc:"Nieprawidłowy rekord SPF umożliwia rozsyłanie spamu z adresów @firma.pl. Naprawa konfiguracji DNS w toku.",urgency:"Low",impact:"Low",ts:"2025-05-07T13:45"},
+];
+
+let incidents=SAMPLE.map((s,i)=>({...s,id:`INC-${String(i+1).padStart(4,"0")}`,priority:MATRIX[s.urgency][s.impact]}));
+let nextId=incidents.length+1;
+let activeFilter="Wszystkie";
+
+/* ── VIEW ── */
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  const isQ=v==='queue';
+  document.getElementById('btn-queue').className='tb-btn'+(isQ?' active':'');
+  document.getElementById('sb-queue').className='sidebar-item'+(isQ?' active':'');
+  document.getElementById('sb-form').className='sidebar-item'+(!isQ?' active':'');
+  if(isQ)renderQueue();
+  if(v==='form')updatePrio();
+}
+
+/* ── PRIORITY PREVIEW ── */
+function updatePrio(){
+  const u=document.getElementById('f-urg').value;
+  const i=document.getElementById('f-imp').value;
+  const p=MATRIX[u][i];const m=PM[p];
+  const d=document.getElementById('prio-display');
+  d.style.borderColor=m.border;d.style.background=m.bg;
+  const sw=document.getElementById('prio-swatch');
+  sw.style.background=m.swatchBg;
+  sw.innerHTML=`<svg viewBox="0 0 16 16" fill="none" width="16" height="16"><circle cx="8" cy="8" r="4" fill="${m.color}"/></svg>`;
+  document.getElementById('prio-label').style.color=m.color;
+  document.getElementById('prio-label').textContent=m.label;
+  document.getElementById('prio-sub').textContent=`Pilność: ${UL[u]} · Wpływ: ${IL[i]}`;
+  document.getElementById('prio-tag').textContent=`${u[0]}+${i[0]}`;
+}
+
+/* ── FORM SUBMIT ── */
+function submitForm(){
+  const checks=[
+    ['f-fn','err-fn',v=>v.trim(),'Pole wymagane'],
+    ['f-ln','err-ln',v=>v.trim(),'Pole wymagane'],
+    ['f-email','err-email',v=>/\S+@\S+\.\S+/.test(v),'Nieprawidłowy adres e-mail'],
+    ['f-phone','err-phone',v=>v.trim(),'Pole wymagane'],
+    ['f-title','err-title',v=>v.trim(),'Podaj tytuł incydentu'],
+    ['f-desc','err-desc',v=>v.trim(),'Opisz problem'],
+  ];
+  let ok=true;
+  checks.forEach(([fid,eid,fn,msg])=>{
+    const v=document.getElementById(fid).value;
+    const e=document.getElementById(eid);
+    if(!fn(v)){e.textContent=msg;ok=false}else e.textContent='';
+  });
+  if(!ok)return;
+  const urgency=document.getElementById('f-urg').value;
+  const impact=document.getElementById('f-imp').value;
+  const inc={
+    id:`INC-${String(nextId++).padStart(4,"0")}`,
+    fn:document.getElementById('f-fn').value.trim(),
+    ln:document.getElementById('f-ln').value.trim(),
+    email:document.getElementById('f-email').value.trim(),
+    phone:document.getElementById('f-phone').value.trim(),
+    title:document.getElementById('f-title').value.trim(),
+    desc:document.getElementById('f-desc').value.trim(),
+    urgency,impact,priority:MATRIX[urgency][impact],
+    ts:new Date().toISOString().slice(0,16),
+  };
+  incidents.unshift(inc);
+  ['f-fn','f-ln','f-email','f-phone','f-title','f-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-urg').value='High';
+  document.getElementById('f-imp').value='High';
+  showToast(`Zgłoszenie ${inc.id} zostało utworzone`);
+  activeFilter='Wszystkie';
+  showView('queue');
+}
+
+/* ── RENDER QUEUE ── */
+function renderQueue(){
+  const cnt={Krytyczny:0,Wysoki:0,Średni:0,Niski:0};
+  incidents.forEach(i=>cnt[i.priority]++);
+  document.getElementById('sm-p1').textContent=cnt.Krytyczny;
+  document.getElementById('sm-p2').textContent=cnt.Wysoki;
+  document.getElementById('sm-p3').textContent=cnt.Średni;
+  document.getElementById('sm-p4').textContent=cnt.Niski;
+  document.getElementById('sb-crit-count').textContent=cnt.Krytyczny;
+  document.getElementById('sb-crit-count').className='sidebar-badge'+(cnt.Krytyczny===0?' low':'');
+  document.getElementById('q-sub').textContent=`Łącznie ${incidents.length} zgłoszeń`;
+
+  // filters
+  const fs=document.getElementById('filter-strip');
+  fs.innerHTML='';
+  const labels={Wszystkie:`Wszystkie (${incidents.length})`,Krytyczny:`P1 · Krytyczny (${cnt.Krytyczny})`,Wysoki:`P2 · Wysoki (${cnt.Wysoki})`,Średni:`P3 · Średni (${cnt.Średni})`,Niski:`P4 · Niski (${cnt.Niski})`};
+  Object.entries(labels).forEach(([k,v])=>{
+    const b=document.createElement('button');
+    b.className='flt'+(activeFilter===k?' active':'');
+    b.textContent=v;
+    b.onclick=()=>{activeFilter=k;renderQueue()};
+    fs.appendChild(b);
+  });
+
+  const list=activeFilter==='Wszystkie'?incidents:incidents.filter(i=>i.priority===activeFilter);
+  const tbody=document.getElementById('queue-body');
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 44 44" fill="none"><rect x="8" y="10" width="28" height="26" rx="4" stroke="#1d1d1f" stroke-width="1.5"/><path d="M16 19h12M16 25h8" stroke="#1d1d1f" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <div class="empty-text">Brak incydentów w tej kategorii</div>
+    </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=list.map(inc=>{
+    const m=PM[inc.priority];
+    const uc=CC[inc.urgency];const ic=CC[inc.impact];
+    const isCrit=inc.priority==='Krytyczny';
+    const name=esc((inc.fn||inc.firstName)+' '+(inc.ln||inc.lastName));
+    return `<tr class="${isCrit?'row-crit':''}" onclick="openModal('${inc.id}')">
+      <td class="td-id">${inc.id}</td>
+      <td><span class="pill" style="color:${m.color};background:${m.bg};border-color:${m.border}">
+        <span class="pill-dot" style="background:${m.color}"></span>${m.short}
+      </span></td>
+      <td class="td-title" title="${esc(inc.desc)}">${esc(inc.title)}</td>
+      <td class="td-person">${name}</td>
+      <td><span class="chip" style="color:${uc.c};background:${uc.bg};border-color:${uc.b}">${UL[inc.urgency]}</span></td>
+      <td><span class="chip" style="color:${ic.c};background:${ic.bg};border-color:${ic.b}">${IL[inc.impact]}</span></td>
+      <td class="td-ts">${inc.ts.replace('T',' ')}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── MODAL ── */
+function openModal(id){
+  const inc=incidents.find(i=>i.id===id);if(!inc)return;
+  const m=PM[inc.priority];
+  const uc=CC[inc.urgency];const ic=CC[inc.impact];
+  const name=esc((inc.fn||inc.firstName)+' '+(inc.ln||inc.lastName));
+  document.getElementById('modal-head-content').innerHTML=`
+    <div style="margin-bottom:12px">
+      <div class="modal-id-tag">${inc.id} &nbsp;·&nbsp; ${inc.ts.replace('T',' ')}</div>
+      <div class="modal-title">${esc(inc.title)}</div>
+    </div>
+    <span class="pill" style="color:${m.color};background:${m.bg};border-color:${m.border}">
+      <span class="pill-dot" style="background:${m.color}"></span>${m.label}
+    </span>`;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-desc-box">${esc(inc.desc)}</div>
+    <div class="modal-meta-grid">
+      <div class="meta-field"><span class="meta-key">Zgłaszający</span><span class="meta-val">${name}</span></div>
+      <div class="meta-field"><span class="meta-key">Data zgłoszenia</span><span class="meta-val">${inc.ts.replace('T',' ')}</span></div>
+      <div class="meta-field"><span class="meta-key">E-mail</span><span class="meta-val" style="font-size:.83rem">${esc(inc.email)}</span></div>
+      <div class="meta-field"><span class="meta-key">Telefon</span><span class="meta-val">${esc(inc.phone)}</span></div>
+      <div class="meta-field"><span class="meta-key">Pilność</span>
+        <span class="chip" style="color:${uc.c};background:${uc.bg};border-color:${uc.b}">${UL[inc.urgency]}</span>
+      </div>
+      <div class="meta-field"><span class="meta-key">Wpływ</span>
+        <span class="chip" style="color:${ic.c};background:${ic.bg};border-color:${ic.b}">${IL[inc.impact]}</span>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+function maybeClose(e){if(e.target===document.getElementById('modal-overlay'))closeModal()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+/* ── TOAST ── */
+let tt;
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+/* ── INIT ── */
+updatePrio();
+renderQueue();
+</script>
+</body>
+</html>
